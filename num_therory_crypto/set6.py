@@ -10,7 +10,7 @@ from Crypto.Cipher import AES
 import hmac
 import rsa
 import math
-
+import re
 
 ################################
 ######## Chal 41
@@ -75,8 +75,103 @@ def chal41():
     assert attacker_pt == original_pt
     print("challenge 41 works")
 
+
+################################
+######## Chal 42
+## Bliechenbacher e=3 RSA attack
+
+def find_prefix_cube_root(x,n):
+    '''given a binary string x, find a y where
+     y**3 = x || r, the number should start with x
+     but can have n random trailing bytes
+     This is used for chal42'''
+
+    # add zeros to the end of binary 
+    xlow = bin2int(x + n * "\x00")
+    xhigh = bin2int(x + n * "\x11")
+    # find an approximation for such number
+    el = math.floor(100*(math.log(xlow,2)))/(3*100.)
+    eh = math.ceil(100*(math.log(xhigh,2)))/(3*100.)
+    yl = int(pow(2,el))
+    yh = int(pow(2,eh))
+    y0 = (yl + yh) / 2
+
+    # use bisection to find a number that lies between
+    # xlow and xhigh
+    while not xlow < y0**3 < xhigh:
+        if y0**3 < xlow:
+            yl = y0
+            y0 = y0 + (yh - y0)/2
+        else:
+            yh = y0
+            y0 = y0 - (y0-yl)/2
+
+    return y0
+    
+
+def chal42():
+    keyL = 2048/8
+    msg = "hi mom"
+    
+    r1 = rsa.RSA()
+
+    def poor_signature_verifier(sig):
+        ''' verifies that the signature is correct
+        '''
+        # create an RSA module and encrypt the msg
+        # this is like saying m**3 which should give us the signature
+        validation = int2bin(r1.encrypt(sig))
+        if validation[0] == '\x01':
+            j = 1
+            while validation[j] != '\x00':
+                j += 1
+            if validation[j] != '\x00':
+                print("error in the padding")
+            
+            if validation[j+1:j+33] == sha256(msg).digest():
+                result = True
+                print("valid signature")
+            else:
+                result = False
+                print("invalid signature")
+
+        return result
+        
+
+    def sign_msg():
+        ''' creates a message and signs it using RSA'''
+        h = sha256(msg).digest()
+        # now pad the message 00 01 ff ff ... 00 ASN.1 HASH
+        # Skipping ASN.1 for simplicity
+        # the key is 2048 bits, sha256 is 256bits
+        padded_msg = "\x00" + "\x01" + (keyL-256/8-3)*"\xff" + "\x00" + h
+        assert len(padded_msg) == 2048/8
+        # create 1024 bit RSA key and sign the message by decrypting it
+
+        signature = r1.decrypt(bin2int(padded_msg))
+        return signature
+        
+
+    def forge_sig():
+        '''forge a signature knowing that I don't need a whole lot of \xff
+        I just only need one or two'''
+        (e,N) = r1.getPK()
+        assert e == 3
+        """ now we need to find a value x that when x**3 is calculated it yields
+        0001ffff hash some garbage"""
+        forged_msg = "\x01" + "\xff\xff\x00" + sha256(msg).digest()
+        # we have 219 bytes we can as a prefix, we will use 60 of them as degrees of
+        # freedom for finding a number and the 210 of the rest will be just zeros
+        # which is equivalent to 40 suffix of 0
+        return int2bin(find_prefix_cube_root(forged_msg,90) << 40)
+    
+    poor_signature_verifier(sign_msg())
+    assert poor_signature_verifier(forge_sig()) == True
+    print("challenge 42 done")
+
 if __name__ == "__main__":
-    chal41()
+    #chal41()
+    chal42()
 
 
 

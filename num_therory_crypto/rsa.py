@@ -47,7 +47,7 @@ class RSA():
     def encrypt(self,m):
         '''encrypt a string'''
         m = bin2int(m)
-        print("rsa_enc:",m)
+        #print("rsa_enc:",m)
         return self._encrypt(m)
 
     def decrypt(self,c):
