@@ -6,9 +6,11 @@ import random
 import os
 from crypto_math import *
 from hashlib import sha256
+from hashlib import sha1
 from Crypto.Cipher import AES
 import hmac
 import rsa
+import dsa
 import math
 import re
 
@@ -169,9 +171,60 @@ def chal42():
     assert poor_signature_verifier(forge_sig()) == True
     print("challenge 42 done")
 
+################################
+######## Chal 43
+## DSA key recovery from nonce
+
+def DSA_secret_key_from_nonce(q,r,s,k,msg,H):
+    '''returns the secret key given the nonce k
+        x = (s*k - H(m)) * inv(r)  mod q '''
+    invr = invmod(r,q)
+    return ((s*k - H(msg)) * invr) % q
+
+def chal43():
+    # publik key : y
+
+    y = 0x84ad4719d044495496a3201c8ff484feb45b962e7302e56a392aee4abab3e4bdebf2955b4736012f21a08084056b19bcd7fee56048e004e44984e2f411788efdc837a0d2e5abb7b555039fd243ac01f0fb2ed1dec568280ce678e931868d23eb095fde9d3779191b8c0299d6e07bbb283e6633451e535c45513b2d33c99ea17
+    msg = b"""For those that envy a MC it can be hazardous to your health
+So be friendly, a matter of life and death, just like a etch-a-sketch
+"""
+    
+    q = dsa.Q
+    g = dsa.G
+    p = dsa.P
+    r = 548099063082341131477253921760299949438196259240
+    s = 857042759984254168557880549501802188789837994940
+
+    # the hash function is SHA1
+    H = lambda x: bin2int(sha1(x).digest())
+    assert 0xd2d0714f014a9784047eaeccf956520045c45265 == H(msg)
+
+    # we know that the k (nonce is 16 bit)
+    def brute_force_DSA_SK():
+        public_key = y
+        for k in range(2**16):
+            secret_key = DSA_secret_key_from_nonce(q,r,s,k,msg,H)
+            if modexp(g,secret_key,p) == public_key:
+                return secret_key,k
+        print("couldnt find key :(")
+
+    sk,nonce = brute_force_DSA_SK()
+
+    d1 = dsa.DSA()
+    d1._set_key_pair(sk,nonce)
+    assert d1.getPK() == y
+    (R,S) = d1.sign(msg)
+    assert R == 548099063082341131477253921760299949438196259240
+    assert S == 857042759984254168557880549501802188789837994940
+    assert sha1(bin2hex(int2bin(sk))).hexdigest() == '0954edd5e0afe5542a4adf012611a91912a3ec16'
+    print("Challenge 43 done!")
+
+
+
+#############
 if __name__ == "__main__":
     #chal41()
-    chal42()
-
+    #chal42()
+    chal43()
 
 
