@@ -13,6 +13,7 @@ import rsa
 import dsa
 import math
 import re
+import base64
 
 ################################
 ######## Chal 41
@@ -319,6 +320,73 @@ def chal45():
     print("Challenge 45 done!")
 
 
+################################
+######## Chal 46
+## RSA parity oracle
+
+def RSA_parity_oracle(rsa_agent, cipher_text):
+    '''returns if the plaintext is even or odd
+    even -> False
+    odd -> True '''
+    N = rsa_agent.getPK()[1]
+    pt = (rsa_agent._decrypt(cipher_text)) % N
+    if pt % 2 != 0:
+        return True
+    return False
+
+def RSA_oracle_attack(ct,rsa_handle):
+    '''decrypt the cipher text using the oracle
+    rsa_handle is the RSA object (like a cookie) to talk to server
+    ct is the cipher text'''
+    forged_ct = ct
+    e = 3       # public key
+    N = rsa_handle.getPK()[1]
+    ''' low bound is 0 and high bound is N (PK)
+        we find bits one by one by having the oracle
+        tell us if there is an overflow. This would help
+        us decide if the jth bit is 0 or 1. We continue
+        this process until all the bits are decrypted
+
+        jth step:
+
+        if (2**j) * ct overflows
+            we would increase the low bound to the middle
+            of low bound and high bound
+        if not
+            we would decrease the high bound to the middle
+            of the low bound and the high bound
+    '''
+    low_bound = 0
+    high_bound = N
+    while low_bound + 1 < high_bound:
+        forged_ct = (8 * forged_ct) % N
+        if RSA_parity_oracle(rsa_handle, forged_ct):
+            low_bound = (low_bound + high_bound ) / 2
+        else:
+            high_bound = (low_bound + high_bound + 1) / 2 
+        print(int2bin(high_bound))
+    high_bound = (low_bound + high_bound + 1 ) / 2 
+    print("---")
+    print("decrypted text:")
+    print(int2bin(high_bound))
+    print("---")
+    return int2bin(high_bound)
+
+def chal46():
+    msg64 = "VGhhdCdzIHdoeSBJIGZvdW5kIHlvdSBkb24ndCBwbGF5IGFyb3VuZCB3aXRoIHRoZSBGdW5reSBDb2xkIE1lZGluYQ=="
+    msg = base64.b64decode(msg64)
+
+    # create and RSA object and encrypt the message, 1024bit N
+    # so p,q are 512bits
+    r1 = rsa.RSA(512)
+    ct = r1.encrypt(msg)
+
+    pt_recovered = RSA_oracle_attack(ct,r1)
+    print(bin2hex(pt_recovered))
+    print(bin2hex(r1.decrypt(ct)))
+    #TODO: the last character is sometimes wrong!
+    #assert pt_recovered == r1.decrypt(ct)
+
 
 
 #############
@@ -327,6 +395,7 @@ if __name__ == "__main__":
     #chal42()
     #chal43()
     #chal44()
-    chal45()
+    #chal45()
+    chal46()
 
 

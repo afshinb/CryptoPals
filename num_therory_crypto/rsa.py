@@ -11,18 +11,18 @@ def rand_prime(n=2048):
 
 class RSA():
     '''RSA documents here'''
-    def __init__(self):
+    def __init__(self,key_length=2048):
         success = False
         while not success:
             try:
-                self._keygen()
+                self._keygen(key_length)
                 success = True
             except Exception as e:
                 success = False
 
-    def _keygen(self):
-        self.p = rand_prime()
-        self.q = rand_prime()
+    def _keygen(self,key_length):
+        self.p = rand_prime(key_length)
+        self.q = rand_prime(key_length)
         self.n = self.p * self.q
         self.et = (self.p-1) * (self.q-1)
         self.e = 3
@@ -38,11 +38,11 @@ class RSA():
 
     def _encrypt(self,m):
         '''encrypt the msg m'''
-        return modexp(m, self.e, self.n)
+        return modexp(m, self.e, self.n) % self.n
 
     def _decrypt(self,c):
         '''decrypt the cipher text c'''
-        return modexp(c, self.d, self.n)
+        return modexp(c, self.d, self.n) % self.n
 
     def encrypt(self,m):
         '''encrypt a string'''
