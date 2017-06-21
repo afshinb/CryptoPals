@@ -108,7 +108,8 @@ class DSA():
 
 if __name__ == "__main__":
     d1 = DSA()
-    msg="Hello Test"
+    msg1="Hello Test"
+    msg2="Hello2"
     (R,S) = d1.sign(msg)
     assert d1.verify_signature(R,S,msg,d1.getPK())
     assert not d1.verify_signature(R,S,msg + "forged_msg",d1.getPK())

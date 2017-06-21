@@ -220,11 +220,84 @@ So be friendly, a matter of life and death, just like a etch-a-sketch
     print("Challenge 43 done!")
 
 
+################################
+######## Chal 44
+## DSA nonce recovery from repeated nonce
+
+def chal44():
+    msgs = list()
+    m_list = list()
+    s_list = list()
+    r_list = list()
+    q = dsa.Q
+    g = dsa.G
+    p = dsa.P
+
+    y = 0x2d026f4bf30195ede3a088da85e398ef869611d0f68f0713d51c9c1a3a26c95105d915e2d8cdf26d056b86b8a7b85519b1c23cc3ecdc6062650462e3063bd179c2a6581519f674a61f1d89a1fff27171ebc1b93d4dc57bceb7ae2430f98a6a4d83d8279ee65d71c1203d2c96d65ebbf7cce9d32971c3de5084cce04a2e147821
+
+    def read_input_file():
+        with open('44.txt','r') as f:
+            txt = f.read()
+        lines = txt.split("\n")
+        for line in lines:
+            if line.startswith("msg: "):
+                msgs.append(line[5:])
+            elif line.startswith("r: "):
+                r_list.append(line[3:])
+            elif line.startswith("s: "):
+                s_list.append(line[3:])
+            elif line.startswith("m: "):
+                m_list.append(line[3:])
+            else:
+                raise Exception("Failed to parse file")
+
+        s = map(lambda x:int(x),s_list)
+        r = map(lambda x:int(x),r_list)
+        m = map(lambda x:int(x,16),m_list)
+        return (s,r,m,msgs)
+
+    def find_repeated_nonce(s,r,m,msgs):
+        ''' we have repeated nonce if 
+            r = g **k mod p is repeated
+            sk = H(m) + xr ->
+            k = (m1 - m2) / (s1 - s2)  %q 
+            given a nonce k we can find the secret key by
+            x = (s*k - m) / r %q'''
+        
+        r_dict = dict()
+        index1, index2 = None, None
+        for j in range(len(r)):
+            if r[j] in r_dict:
+                index1 = r_dict[r[j]]
+                index2 = j
+                #break
+            r_dict[r[j]] = j
+
+        invS = invmod( (s[index1] - s[index2])%q, q ) % q
+        deltaM = (m[index1] - m[index2]) % q
+        assert (invS * (s[index1] - s[index2]) ) % q == 1
+        k = ( deltaM * invS ) % q
+
+        assert (k * ((s[index1] - s[index2])) ) %q == deltaM
+        i = index1
+        j = index2
+        invR = invmod(r[i],q) 
+        xi = ( ((s[i]*k - m[i])) * invR) % q
+
+        return (xi, k)
+
+    (s,r,m,msgs) = read_input_file()
+    #find_repeated_nonce(s,r,m,msgs)
+    priv_key, nonce = find_repeated_nonce(s,r,m,msgs)
+    assert sha1(bin2hex(int2bin(priv_key))).hexdigest() == "ca8f6f7c66fa362d40760d135b763eb8527d3d52"
+    print("challenge 44 done!")
+
 
 #############
 if __name__ == "__main__":
     #chal41()
     #chal42()
-    chal43()
+    #chal43()
+    chal44()
 
 
