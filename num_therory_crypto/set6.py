@@ -292,12 +292,41 @@ def chal44():
     assert sha1(bin2hex(int2bin(priv_key))).hexdigest() == "ca8f6f7c66fa362d40760d135b763eb8527d3d52"
     print("challenge 44 done!")
 
+################################
+######## Chal 45
+## DSA parameter tampering
+
+def chal45():
+    ''' DSA tampering by setting g = 0, g = p+1
+    '''
+
+    # 1:  g = 0
+    d1 = dsa.DSA()
+    d1._set_g_parameter(0)
+    msg1 = "check out the hook while dj revolves it"
+    msg2 = "ice ice baby"
+    (r1,s1) = d1.sign(msg1)
+    (r2,s2) = d1.sign(msg2)
+    # this signature verifies for every message
+    assert d1.verify_signature(r2,s2,msg1,0)
+
+    # 2: g = p+1
+    # can fake the signature for any message
+    d2 = dsa.DSA()
+    d2._set_g_parameter(dsa.P + 1)
+    (r1,s1) = d2.sign(msg1)
+    assert d2.verify_signature(r1,s1,msg2,1)
+    print("Challenge 45 done!")
+
+
+
 
 #############
 if __name__ == "__main__":
     #chal41()
     #chal42()
     #chal43()
-    chal44()
+    #chal44()
+    chal45()
 
 

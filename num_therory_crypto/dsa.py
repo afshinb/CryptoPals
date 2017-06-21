@@ -52,6 +52,9 @@ class DSA():
         self.y = modexp(self.g,self.x,self.p)
         return
     
+    def _set_g_parameter(self,g):
+        self.g = g
+
     def _set_key_pair(self,secret_key, nonce):
         self.x = secret_key
         self.k = nonce
@@ -73,15 +76,18 @@ class DSA():
                 k = os_rand(N)
         r = (modexp(g,k,p)) % q
         
+        ''' disabling this part for challenge 45
         if r == 0:
             return None
+        '''
         sr = (H(msg) + x*r) % q
         sl = invmod(k,q)
         assert sl * k % q == 1
         s = (sl * sr) % q
+        ''' disabling this part for challenge 45
         if s == 0:
             return None
-
+        '''
         return (r,s)
 
     def verify_signature(self,r,s,msg,y):
@@ -108,8 +114,7 @@ class DSA():
 
 if __name__ == "__main__":
     d1 = DSA()
-    msg1="Hello Test"
-    msg2="Hello2"
+    msg="Hello Test"
     (R,S) = d1.sign(msg)
     assert d1.verify_signature(R,S,msg,d1.getPK())
     assert not d1.verify_signature(R,S,msg + "forged_msg",d1.getPK())
